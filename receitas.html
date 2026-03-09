@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Livro de Receitas Premium</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+
+        :root {
+            --accent: #fb923c;
+            --bg-dark: #0f172a;
+            --card-dark: #1e293b;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-dark);
+            color: #f1f5f9;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: 'Playfair Display', serif;
+        }
+
+        .recipe-card {
+            background: var(--card-dark);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .recipe-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(251, 146, 60, 0.3);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(2, 6, 23, 0.95);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .search-bar {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .search-bar:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(251, 146, 60, 0.2);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 10px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+    </style>
+</head>
+
+<body class="selection:bg-orange-500/30">
+
+    <nav class="bg-slate-900/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center rotate-3">
+                    <i class="fas fa-utensils text-white text-lg -rotate-3"></i>
+                </div>
+                <h1 class="text-2xl font-black tracking-tight text-white italic">Chef<span
+                        class="text-orange-500">Box</span></h1>
+            </div>
+            <button onclick="openAddModal()"
+                class="bg-white hover:bg-orange-500 hover:text-white text-slate-900 px-6 py-2.5 rounded-full text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-white/5">
+                <i class="fas fa-plus"></i> Criar Receita
+            </button>
+        </div>
+    </nav>
+
+    <header class="relative py-24 px-6 overflow-hidden">
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full opacity-20 pointer-events-none">
+            <div class="absolute top-10 left-10 w-64 h-64 bg-orange-500 rounded-full blur-[120px]"></div>
+            <div class="absolute bottom-10 right-10 w-64 h-64 bg-blue-500 rounded-full blur-[120px]"></div>
+        </div>
+
+        <div class="max-w-3xl mx-auto text-center relative z-10">
+            <h2 class="text-5xl md:text-6xl font-bold mb-8 leading-tight">As suas memórias <br><span
+                    class="text-orange-500">em cada prato.</span></h2>
+            <div class="search-bar relative max-w-lg mx-auto rounded-2xl p-1">
+                <input type="text" id="searchInput" placeholder="Procure por sabor, nome ou ingrediente..."
+                    class="w-full bg-transparent pl-12 pr-4 py-4 rounded-xl text-white outline-none placeholder:text-slate-500">
+                <i class="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-orange-500"></i>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-6 pb-24">
+        <div id="recipeGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+        <div id="noResults" class="text-center py-32 animate-in">
+            <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-book-open text-2xl text-slate-500"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">Seu livro está vazio</h3>
+            <p class="text-slate-400">Clique em "Criar Receita" para começar a sua coleção.</p>
+        </div>
+    </main>
+
+    <!-- Modal de Visualização -->
+    <div id="recipeModal" class="modal px-4" onclick="closeOnOverlay(event, 'recipeModal')">
+        <div
+            class="bg-slate-900 rounded-[2.5rem] max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-2xl border border-white/10 flex flex-col">
+            <div class="p-8 overflow-y-auto custom-scrollbar flex-grow">
+                <div id="modalContent"></div>
+            </div>
+            <div class="p-6 bg-slate-800/50 border-t border-white/5 flex justify-between items-center gap-4">
+                <button onclick="toggleModal('recipeModal')"
+                    class="text-slate-400 hover:text-white transition-colors text-sm font-bold px-4">FECHAR</button>
+                <div class="flex gap-3">
+                    <button id="editBtn"
+                        class="bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-2xl text-sm font-bold transition-all flex items-center gap-2">
+                        <i class="fas fa-edit"></i> EDITAR
+                    </button>
+                    <button id="copyBtn"
+                        class="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-2xl text-sm font-bold transition-all shadow-lg shadow-orange-500/20 flex items-center gap-2">
+                        <i class="far fa-copy"></i> COPIAR
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Formulário (Add/Edit) -->
+    <div id="formModal" class="modal px-4" onclick="closeOnOverlay(event, 'formModal')">
+        <div class="bg-slate-900 rounded-[2.5rem] max-w-xl w-full p-10 shadow-2xl border border-white/10">
+            <h3 id="formTitle" class="text-3xl font-bold mb-8 text-white">Nova Criação</h3>
+            <input type="hidden" id="editRecipeId">
+            <div class="space-y-5">
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Nome do
+                        Prato</label>
+                    <input type="text" id="recipeName" placeholder="Ex: Risoto de Cogumelos"
+                        class="w-full bg-slate-800 p-4 rounded-2xl border border-white/5 outline-none focus:border-orange-500 transition-all text-white">
+                </div>
+                <div>
+                    <label
+                        class="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Ingredientes
+                        (um por linha)</label>
+                    <textarea id="recipeIngredients"
+                        class="w-full bg-slate-800 p-4 rounded-2xl border border-white/5 h-32 outline-none focus:border-orange-500 transition-all text-white custom-scrollbar"></textarea>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Modo de
+                        Preparo</label>
+                    <textarea id="recipeDirections"
+                        class="w-full bg-slate-800 p-4 rounded-2xl border border-white/5 h-32 outline-none focus:border-orange-500 transition-all text-white custom-scrollbar"></textarea>
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button onclick="toggleModal('formModal')"
+                        class="flex-1 py-4 font-bold text-slate-400 hover:text-white transition-colors">CANCELAR</button>
+                    <button onclick="saveRecipe()"
+                        class="flex-1 py-4 bg-white text-slate-900 rounded-2xl font-bold hover:bg-orange-500 hover:text-white transition-all">SALVAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Lista completa com as 48 receitas extraídas da Página1.html
+        let recipes = [
+            // --- LINHA 1 ---
+            { id: 1, title: "Pavê", ingredients: ["1 lata de leite condensado", "2 gemas", "1/2 litro de leite", "2 colheres de maisena", "2 colheres de açúcar", "1 lata de creme de leite sem soro"], directions: "Creme base: Leite condensado, gemas, leite e maisena ao fogo. Cobertura: Bater claras em neve com açúcar e creme de leite sem soro." },
+            { id: 2, title: "Bolo Prestígio", ingredients: ["2 1/2 xíc. de trigo", "2 1/2 xíc. de açúcar", "4 colheres de chocolate em pó", "4 ovos (claras em neve)", "2 colheres de margarina", "1 colher (sopa) fermento", "2 xíc. de leite"], directions: "Recheio: Ferver 1/2 lata leite condensado, coco ralado e 2 xíc. leite/água. Cobertura: Leite condensado, chocolate e margarina ao fogo." },
+            { id: 3, title: "Bolo de Sardinha", ingredients: ["10 colheres de trigo", "1 lata de sardinha em óleo", "1 cebola picada", "2 tomates sem pele", "1 xíc. de leite", "1 xíc. de azeite", "Sal", "2 ovos", "Cheiro verde"], directions: "Misturar os ingredientes da massa e incorporar o recheio de sardinha com temperos. Assar em forma untada." },
+            { id: 4, title: "Torta de Banana", ingredients: ["6 colheres de trigo", "4 colheres de maisena", "4 colheres de açúcar", "Margarina", "1 ovo", "Fermento", "10 bananas", "Canela"], directions: "Massa: Amassar tudo com a mão. Recheio: Misturar bananas, margarina, maisena, canela e açúcar. Montar e assar." },
+            { id: 5, title: "Pão de Queijo", ingredients: ["1 pct. polvilho azedo", "2 copos de leite", "1 copo de azeite", "2 fatias de queijo", "4 ovos", "Sal"], directions: "Escaldar o polvilho com leite e óleo ferventes. Adicionar ovos e queijo, amassar e assar." },
+            { id: 6, title: "Pastel de Pinga", ingredients: ["10 colheres de trigo", "2 colheres de óleo", "Sal", "Fermento", "1 colher (sopa) de pinga", "1/2 xícara de água morna"], directions: "Misturar os ingredientes e deixar descansar por meia hora antes de abrir a massa e fritar." },
+            { id: 7, title: "Pudim de Leite (Simples)", ingredients: ["1 lata de leite condensado", "Mesma medida de leite", "3 ovos", "1 colher de maizena"], directions: "Bater tudo no liquidificador e assar em banho-maria em forma caramelizada." },
+            { id: 8, title: "Toucinho do Céu", ingredients: ["600ml de leite", "1 xíc. de açúcar", "1 1/2 xíc. de trigo", "2 colheres de margarina", "4 ovos"], directions: "Bater os ingredientes e assar até dourar, mantendo a consistência cremosa." },
+            { id: 9, title: "Bolo Simples", ingredients: ["1 tablete de margarina", "1 xíc. de açúcar", "1 ovo", "1 1/2 xíc. de trigo", "1 1/2 xíc. de leite", "Fermento"], directions: "Bater margarina e açúcar até ficar cremoso. Juntar trigo, leite e fermento. Assar em forno quente." },
+            { id: 10, title: "Beijinho", ingredients: ["1 lata de leite condensado", "100g de coco ralado", "2 gemas", "1 colher de margarina", "Açúcar baunilha"], directions: "Cozinhar tudo junto até desprender do fundo da panela. Esfriar e enrolar." },
+            { id: 11, title: "Nega Maluca", ingredients: ["2 xíc. de trigo", "1 xíc. de açúcar", "1 xíc. de nescau", "1 xíc. de óleo", "1 xíc. de água fervendo", "2 ovos", "Fermento"], directions: "Misturar secos, ovos e óleo. Adicionar água fervendo por último. Cobertura: Açúcar, leite, nescau e margarina." },
+            { id: 12, title: "Mousse de Coco II", ingredients: ["2 envelopes gelatina s/ sabor", "1 xíc. água fria", "2 xíc. leite de coco", "1/2 xíc. coco ralado", "1 xíc. açúcar", "1 lata creme de leite"], directions: "Dissolver gelatina. Bater tudo no liquidificador até ficar espumante. Gelar em forma de alumínio." },
+
+            // --- LINHA 3 ---
+            { id: 13, title: "Cajuzinho", ingredients: ["1 lata de leite condensado", "1 colher de margarina", "8 colheres de amendoim torrado/moído", "2 colheres de Nescau", "Leite"], directions: "Cozinhar até ver o fundo da panela. Despejar em forma untada e deixar esfriar." },
+            { id: 14, title: "Mousse de Coco I", ingredients: ["1 envelope gelatina s/ sabor", "5 colheres água", "1 1/2 xíc. leite", "1 1/2 xíc. açúcar", "200g coco ralado", "2 xíc. creme de leite fresco"], directions: "Dissolver gelatina no leite/açúcar quente. Juntar coco. Incorporar creme de leite batido em picos firmes e gelar." },
+            { id: 15, title: "Sorvete de Morango", ingredients: ["1 pct. pudim de morango", "2 xíc. leite", "1 lata creme de leite", "100g morangos frescos"], directions: "Cozinhar o pudim com leite. Juntar creme de leite e morangos. Congelar em forma de gelo." },
+            { id: 16, title: "Torta Creme de Limão", ingredients: ["1 pct. biscoito leite e mel", "1 colher manteiga", "1 lata leite condensado", "1 lata creme de leite", "Gelatina s/ sabor", "1/2 copo suco limão"], directions: "Base: Biscoito e manteiga. Recheio: Bater os outros ingredientes no liquidificador e gelar sobre a massa." },
+            { id: 17, title: "Brigadeirão", ingredients: ["1 lata leite condensado", "1 lata creme de leite", "1 xíc. chocolate em pó", "3 colheres açúcar", "1 colher manteiga", "3 ovos"], directions: "Bater tudo. Assar em forma de furo em banho-maria por 1h30 (180°C). Decorar com granulado." },
+            { id: 18, title: "Torta Preguiçosa de Banana", ingredients: ["2 xíc. açúcar", "1 1/2 xíc. trigo", "Fermento", "Canela", "100g margarina", "2 ovos", "Bananas"], directions: "Fazer farofa com secos. Alternar camadas de farofa e banana. Cobrir com margarina e ovos batidos. Assar." },
+            { id: 19, title: "Pão de Ló Fácil", ingredients: ["1 xíc. leite/água", "2 xíc. farinha", "1 1/2 xíc. açúcar", "4 ovos", "Fermento", "Emulsificante"], directions: "Bater todos os ingredientes juntos na batedeira até dobrar de volume. Assar a 180°C." },
+            { id: 20, title: "Strogonoff de Nozes", ingredients: ["1 lata leite condensado cozido", "Creme de leite", "200g nozes picadas", "200g damasco cozido"], directions: "Misturar o leite condensado cozido com creme de leite. Adicionar nozes e damasco. Servir gelado." },
+            { id: 21, title: "Torta de Queijo com Chocolate", ingredients: ["2 xíc. biscoito moído", "100g margarina", "1 pct. pudim chocolate", "1 copo requeijão", "3 ovos (claras em neve)"], directions: "Base: Biscoito e margarina. Recheio: Cozinhar pudim com leite, juntar requeijão e gemas. Incorporar claras e assar." },
+            { id: 22, title: "Trufa", ingredients: ["400g creme de leite", "200g chocolate ao leite", "200g chocolate meio amargo", "Conhaque", "200g chocolate p/ cobertura"], directions: "Derreter chocolates, misturar conhaque e creme de leite. Gelar 12h. Enrolar e banhar no chocolate derretido." },
+            { id: 23, title: "Empada (Massa)", ingredients: ["12 colheres trigo", "1 tablete margarina", "3 colheres banha", "3 gemas", "3 colheres maizena", "2 colheres leite"], directions: "Misturar ingredientes até soltar das mãos. Forrar forminhas e rechear a gosto." },
+            { id: 24, title: "Rocambole Surpresa", ingredients: ["2 pcts coco ralado", "2 latas leite condensado", "6 ovos", "200g castanhas", "7 colheres açúcar", "6 colheres chocolate", "1 copo trigo"], directions: "Forrar forma com leite condensado, coco e castanhas. Cobrir com massa de pão de ló de chocolate. Assar e enrolar quente." },
+
+            // --- LINHA 5 ---
+            { id: 25, title: "Biscoito de Vento 'Jandira'", ingredients: ["500g polvilho azedo", "1 copo óleo", "1 copo leite", "250ml água", "Sal"], directions: "Escaldar polvilho com leite e óleo ferventes. Bater na batedeira com água morna até ponto de pingar. Assar." },
+            { id: 26, title: "Pudim de Banana", ingredients: ["1 lata leite condensado", "2 medidas leite", "1 colher manteiga", "3 ovos", "6 bananas", "1 xíc. farinha de rosca"], directions: "Bater tudo. Assar em forma caramelizada em banho-maria (1h no forno ou 20min na pressão)." },
+            { id: 27, title: "Pão de Ló (Resumo)", ingredients: ["5 ovos", "3 xíc. açúcar", "1 1/2 medida suco laranja", "1 1/2 medida maizena", "1 1/2 medida trigo", "Fermento"], directions: "Bater claras em neve, misturar gemas e açúcar. Adicionar secos e suco. Assar." },
+            { id: 28, title: "Toalha Felpuda (Resumo)", ingredients: ["2 xíc. açúcar", "3 xíc. trigo", "1 tablete margarina", "3 ovos", "1 xíc. leite", "1/2 xíc. azeite", "Fermento"], directions: "Bater os ingredientes da massa e assar. Geralmente servido gelado e molhado em leite de coco." },
+            { id: 29, title: "Pudim de Leite Condensado", ingredients: ["1 lata leite condensado", "2 medidas leite", "3 ovos", "1 xíc. açúcar (calda)"], directions: "Fazer a calda caramelizada. Bater o pudim no liquidificador e assar em banho-maria por 1h30." },
+            { id: 30, title: "Pavê Delícia de Coco", ingredients: ["2 gemas", "2 xíc. leite", "1/2 xíc. açúcar", "2 colheres maizena", "100g coco ralado", "Biscoito champanhe", "5 claras (suspiro)"], directions: "Fazer creme de coco. Montar com biscoitos. Cobrir com suspiro e dourar no forno rápido." },
+            { id: 31, title: "Quadrados de Coco e Maçã", ingredients: ["2 xíc. maçã cubinhos", "1 xíc. açúcar", "1/2 xíc. trigo", "Fermento", "1 ovo", "1 colher manteiga", "Baunilha", "100g coco ralado"], directions: "Misturar tudo. Assar por 40 min em forma retangular. Cortar em quadrados depois de frio." },
+            { id: 32, title: "Fogozinhos de Leite Condensado", ingredients: ["3 xíc. trigo", "Fermento", "1 ovo", "1 xíc. leite", "1 lata leite condensado", "50g manteiga"], directions: "Misturar massa. Encher metade de forminhas de empada. Colocar 1 colher de leite condensado por cima e assar." },
+            { id: 33, title: "Pavê de Abacaxi", ingredients: ["Biscoito champanhe", "1 lata leite condensado", "Creme de leite", "Coco ralado", "3 ovos", "1 lata abacaxi em calda"], directions: "Camadas: 1-Creme gemas; 2-Biscoitos na calda; 3-Abacaxi; 4-Suspiro com creme de leite; 5-Coco." },
+            { id: 34, title: "Empadinhas (Massa Podre)", ingredients: ["2 tabletes margarina", "3 gemas", "12 colheres trigo", "3 colheres maizena", "Sal", "Açúcar"], directions: "Misturar até soltar das mãos. Forrar forminhas (não precisa untar). Rechear e pincelar gema." },
+            { id: 35, title: "Bolo de Queijo c/ Goiabada", ingredients: ["1 lata leite condensado", "4 colheres queijo ralado", "Goiabada em tiras", "Massa de empada"], directions: "Misturar leite condensado e queijo. Por sobre a massa de empada nas forminhas, adicionar goiabada e assar." },
+            { id: 36, title: "Torta de Limão", ingredients: ["1 lata leite condensado", "3 ovos", "1/2 xíc. suco limão", "Raspas limão", "1/2 xíc. açúcar", "Massa de torta"], directions: "Creme: Leite condensado, gemas e suco. Cobertura: Claras em neve, açúcar e raspas. Assar por 15 min." },
+
+            // --- LINHA 7 ---
+            { id: 37, title: "Torta Mousse de Maracujá", ingredients: ["Biscoito moído", "100g manteiga", "1 lata leite condensado", "Suco maracujá concentrado", "Gelatina s/ sabor"], directions: "Base: Biscoito. Recheio: Mousse batido com claras em neve. Cobertura: Geleia de maracujá. Gelar 4h." },
+            { id: 38, title: "Cuca de Banana", ingredients: ["2 xíc. açúcar", "3 ovos", "1/2 xíc. óleo", "4 xíc. farinha", "1 xíc. leite", "Fermento", "Farofa de canela"], directions: "Massa simples com bananas por cima. Cobrir com farofa (açúcar, farinha, canela e óleo) e assar." },
+            { id: 39, title: "Bolo de Chocolate", ingredients: ["4 ovos", "1 tablete margarina", "1 xíc. açúcar", "1 xíc. leite", "2 xíc. trigo", "Bicarbonato", "Fermento", "1 xíc. chocolate"], directions: "Bater creme de gemas. Alternar leite e farinha. Por último claras e fermento. Cobertura: Chocolate, leite e açúcar." },
+            { id: 40, title: "Bombons de Coco", ingredients: ["1 xíc. leite", "1 1/2 xíc. açúcar", "3 gemas", "200g coco ralado", "250g chocolate cobertura"], directions: "Cozinhar creme de coco até desgrudar. Esfriar, enrolar e banhar no chocolate derretido." },
+            { id: 41, title: "Chokito Caseiro", ingredients: ["500g chocolate ao leite", "1 colher manteiga", "1 pct. biscoito de leite", "1 pct. coco ralado"], directions: "Derreter chocolate com manteiga, misturar biscoitos e coco. Gelar em forma untada." },
+            { id: 42, title: "Pudim de Pão", ingredients: ["1 lata leite condensado", "2 pães amanhecidos", "4 ovos", "2 medidas leite", "Cravo/Canela"], directions: "Deixar pão no leite por 30min. Bater tudo no liquidificador. Assar em forma caramelizada (1h em banho-maria)." },
+            { id: 43, title: "Bolinhos de Chuva", ingredients: ["2 ovos", "4 colheres açúcar", "1 xíc. leite", "2 xíc. farinha", "Noz-moscada", "Fermento", "Bicarbonato"], directions: "Misturar tudo. Fritar colheradas em óleo quente. Passar no açúcar com canela." },
+            { id: 44, title: "Bolachinhas de Coco", ingredients: ["4 ovos", "4 colheres margarina", "500g polvilho doce", "1 pct. coco ralado", "1 xíc. açúcar", "Fermento"], directions: "Amassar todos os ingredientes até dar ponto de enrolar. Assar até dourar levemente." },
+            { id: 45, title: "Pão de Queijo de Liquidificador", ingredients: ["2 ovos", "2 1/2 xíc. polvilho azedo", "1/2 xíc. óleo", "1 xíc. leite", "Sal"], directions: "Bater tudo no liquidificador. Assar em forminhas de empada até inflar." },
+            { id: 46, title: "Suspiro (Merengue)", ingredients: ["1 copo claras", "3 copos açúcar", "Raspas de limão"], directions: "Aquecer em banho-maria sem cozinhar. Bater na batedeira até esfriar e ficar firme." },
+            { id: 47, title: "Barreirinhas Brownie", ingredients: ["1 xíc. nozes", "100g chocolate meio amargo", "1 lata leite condensado", "1 1/2 xíc. biscoito maisena"], directions: "Cozinhar chocolate e leite condensado até engrossar. Juntar biscoito e nozes. Gelar 4h e cortar." },
+            { id: 48, title: "Torta de Maçã Gelada", ingredients: ["2 xíc. farinha", "2 xíc. leite", "1 xíc. açúcar", "2 gemas (massa)", "1 lata leite condensado (creme)", "Maçãs"], directions: "Assar a massa. Cobrir com creme de leite condensado/maisena e decorar com fatias de maçã." }
+        ];
+
+        function renderRecipes(filter = "") {
+            const grid = document.getElementById('recipeGrid');
+            const noResults = document.getElementById('noResults');
+            grid.innerHTML = "";
+
+            const filtered = recipes.filter(r =>
+                r.title.toLowerCase().includes(filter.toLowerCase()) ||
+                r.ingredients.some(i => i.toLowerCase().includes(filter.toLowerCase()))
+            );
+
+            if (filtered.length === 0) {
+                noResults.classList.remove('hidden');
+                // Ajusta o texto se houver filtro ou se estiver vazio
+                if (filter !== "") {
+                    noResults.querySelector('h3').innerText = "Nada encontrado";
+                    noResults.querySelector('p').innerText = "Tente uma busca diferente.";
+                } else {
+                    noResults.querySelector('h3').innerText = "Seu livro está vazio";
+                    noResults.querySelector('p').innerText = "Clique em 'Criar Receita' para começar a sua coleção.";
+                }
+            } else {
+                noResults.classList.add('hidden');
+            }
+
+            filtered.forEach((recipe, idx) => {
+                const card = document.createElement('div');
+                card.style.animationDelay = `${idx * 100}ms`;
+                card.className = "recipe-card relative p-8 rounded-[2rem] cursor-pointer animate-in overflow-hidden";
+                card.onclick = () => showRecipe(recipe.id);
+                card.innerHTML = `
+                    <div class="relative z-10">
+                        <div class="flex justify-between items-start mb-6"><h3 class="text-2xl font-bold text-white leading-tight">${recipe.title}</h3></div>
+                        <div class="space-y-2 mb-8">
+                            ${recipe.ingredients.slice(0, 3).map(ing => `<p class="text-slate-400 text-sm truncate">• ${ing}</p>`).join('')}
+                            ${recipe.ingredients.length > 3 ? `<p class="text-orange-500/60 text-xs font-bold">+ ${recipe.ingredients.length - 3} itens</p>` : ''}
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Ver detalhes</span>
+                            <div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-orange-500"><i class="fas fa-chevron-right text-xs"></i></div>
+                        </div>
+                    </div>`;
+                grid.appendChild(card);
+            });
+        }
+
+        function showRecipe(id) {
+            const recipe = recipes.find(r => r.id === id);
+            const content = document.getElementById('modalContent');
+            content.innerHTML = `
+                <div class="mb-10">
+                    <h2 class="text-5xl font-bold text-white mb-2 leading-tight">${recipe.title}</h2>
+                    <div class="flex items-center gap-2 text-orange-500 text-sm font-bold"><i class="fas fa-history"></i><span class="uppercase tracking-widest">Receita Salva</span></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div>
+                        <h4 class="text-slate-500 font-black uppercase text-[10px] tracking-[0.3em] mb-6">Ingredientes</h4>
+                        <ul class="space-y-4">
+                            ${recipe.ingredients.map(ing => `<li class="text-slate-300 text-sm flex items-start gap-3"><span class="mt-1 w-2 h-2 rounded-full bg-orange-500 shrink-0"></span>${ing}</li>`).join('')}
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="text-slate-500 font-black uppercase text-[10px] tracking-[0.3em] mb-6">Modo de Preparo</h4>
+                        <p class="text-slate-300 text-sm leading-relaxed whitespace-pre-line bg-white/5 p-6 rounded-3xl border border-white/5 italic">"${recipe.directions}"</p>
+                    </div>
+                </div>`;
+
+            document.getElementById('copyBtn').onclick = () => copyRecipe(recipe.id);
+            document.getElementById('editBtn').onclick = () => openEditModal(recipe.id);
+            toggleModal('recipeModal');
+        }
+
+        function toggleModal(id) {
+            const m = document.getElementById(id);
+            m.classList.toggle('active');
+            document.body.style.overflow = m.classList.contains('active') ? 'hidden' : 'auto';
+        }
+
+        function closeOnOverlay(e, id) { if (e.target.id === id) toggleModal(id); }
+
+        function openAddModal() {
+            document.getElementById('formTitle').innerText = "Nova Criação";
+            document.getElementById('editRecipeId').value = "";
+            document.getElementById('recipeName').value = "";
+            document.getElementById('recipeIngredients').value = "";
+            document.getElementById('recipeDirections').value = "";
+            toggleModal('formModal');
+        }
+
+        function openEditModal(id) {
+            const recipe = recipes.find(r => r.id === id);
+            document.getElementById('formTitle').innerText = "Editar Receita";
+            document.getElementById('editRecipeId').value = recipe.id;
+            document.getElementById('recipeName').value = recipe.title;
+            document.getElementById('recipeIngredients').value = recipe.ingredients.join('\n');
+            document.getElementById('recipeDirections').value = recipe.directions;
+
+            toggleModal('recipeModal');
+            toggleModal('formModal');
+        }
+
+        function saveRecipe() {
+            const id = document.getElementById('editRecipeId').value;
+            const title = document.getElementById('recipeName').value;
+            const ings = document.getElementById('recipeIngredients').value.split('\n').filter(i => i.trim() !== "");
+            const dirs = document.getElementById('recipeDirections').value;
+
+            if (!title || ings.length === 0 || !dirs) return;
+
+            if (id) {
+                const index = recipes.findIndex(r => r.id == id);
+                recipes[index] = { ...recipes[index], title, ingredients: ings, directions: dirs };
+            } else {
+                recipes.unshift({ id: Date.now(), title, ingredients: ings, directions: dirs });
+            }
+
+            toggleModal('formModal');
+            renderRecipes();
+        }
+
+        function copyRecipe(id) {
+            const recipe = recipes.find(r => r.id === id);
+            const text = `🍽️ ${recipe.title.toUpperCase()}\n\n🔹 INGREDIENTES:\n${recipe.ingredients.map(i => '- ' + i).join('\n')}\n\n👨‍🍳 PREPARO:\n${recipe.directions}`;
+            const el = document.createElement('textarea');
+            el.value = text; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
+            const btn = document.getElementById('copyBtn');
+            btn.innerHTML = '<i class="fas fa-check"></i> COPIADO!';
+            setTimeout(() => { btn.innerHTML = '<i class="far fa-copy"></i> COPIAR'; }, 2000);
+        }
+
+        document.getElementById('searchInput').oninput = (e) => renderRecipes(e.target.value);
+        window.onload = () => renderRecipes();
+    </script>
+</body>
+
+</html>
